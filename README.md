@@ -1,3 +1,21 @@
+<p align="center">
+  <img src="assets/banner.svg" width="100%" alt="GASTECT — IoT Gas Leak & Fire Detection System">
+</p>
+
+<p align="center">
+  <a href="https://github.com/nikunj-alt/BIZZ-TYCOON/actions/workflows/pylint.yml">
+    <img src="https://img.shields.io/github/actions/workflow/status/nikunj-alt/BIZZ-TYCOON/pylint.yml?branch=main&label=lint%20%26%20tests&style=for-the-badge&logo=python&logoColor=white" alt="Python lint &amp; tests">
+  </a>
+  <a href="LICENSE">
+    <img src="https://img.shields.io/github/license/nikunj-alt/BIZZ-TYCOON?style=for-the-badge&color=00D4C8" alt="MIT License">
+  </a>
+  <img src="https://img.shields.io/static/v1?label=main%20language&message=TypeScript&style=for-the-badge&logo=typescript&logoColor=white&color=3178C6" alt="TypeScript">
+  <img src="https://img.shields.io/static/v1?label=bridge&message=Python%203.10–3.12&style=for-the-badge&logo=python&logoColor=white&color=3776AB" alt="Python 3.10–3.12">
+  <img src="https://img.shields.io/static/v1?label=dashboard&message=Next.js%2014&style=for-the-badge&logo=nextdotjs&logoColor=white&color=0A0F1A" alt="Next.js 14">
+  <img src="https://img.shields.io/static/v1?label=embedded&message=Arduino%20C%2B%2B&style=for-the-badge&logo=arduino&logoColor=white&color=00979D" alt="Arduino C++">
+  <img src="https://img.shields.io/badge/Bizz%20Tycoons-2026-%23FFD600?style=for-the-badge" alt="Bizz Tycoons 2026">
+</p>
+
 # GASTECT: IoT Gas Leak & Fire Detection System
 
 > Built for **Bizz Tycoons Competition (December 15, 2026)**.  
