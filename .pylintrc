@@ -1,0 +1,15 @@
+[MAIN]
+# Score below which pylint is considered a failure (max is 10.0).
+fail-under=9.0
+
+[MESSAGES CONTROL]
+# Stylistic checks that add noise without catching real bugs. Error-level
+# checks are left fully enabled.
+disable=
+    C0114,   # missing-module-docstring
+    C0115,   # missing-class-docstring
+    C0116,   # missing-function-docstring
+    C0103,   # invalid-name (constants like SIMULATE are intentional)
+    C0413,   # wrong-import-position (tests need sys.path setup first)
+    W0212,   # protected-access (tests may exercise internal helpers)
+    R0903,   # too-few-public-methods

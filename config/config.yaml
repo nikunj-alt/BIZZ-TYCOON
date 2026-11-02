@@ -2,13 +2,17 @@ serial:
   port: "COM3"
   baud_rate: 9600
 
+# Alert thresholds per sensor.
+#   safe:   below this value the sensor is SAFE
+#   warning: at or above this value the sensor is in DANGER
+# The range between ``safe`` and ``warning`` is WARNING.
 alerts:
-  gas_safe: 200
-  gas_warning: 500
-  gas_danger: 1000
-  flame_safe: 200
-  flame_warning: 400
-  flame_danger: 600
+  gas:
+    safe: 200
+    warning: 500
+  flame:
+    safe: 200
+    warning: 400
 
 websocket:
   port: 8765
