@@ -193,7 +193,7 @@ export function HeroSection({
                 value={flame}
                 unit=""
                 icon="🔥"
-                status={flame >= 600 ? 'DANGER' : flame >= 400 ? 'WARNING' : 'SAFE'}
+                status={flame >= 400 ? 'DANGER' : flame >= 200 ? 'WARNING' : 'SAFE'}
                 reducedMotion={reducedMotion}
                 delay={0}
               />
@@ -343,8 +343,28 @@ function MetricCard({ label, value, unit, icon, status, reducedMotion, delay, va
   );
 }
 
-function hexToRgb(hex: string): string {
-  const clean = hex.replace('#', '');
+// Hex values of the design tokens used by `statusColors`. Kept in sync with
+// `--safe`/`--warning`/`--danger`/`--text-muted` in design-system.css so the
+// rgba() conversion below never has to parse a `var(...)` reference.
+const TOKEN_HEX: Record<string, string> = {
+  '--safe': '#00E676',
+  '--warning': '#FFD600',
+  '--danger': '#FF3D00',
+  '--text-muted': '#5A6E9E',
+};
+
+// Resolve a color that may be a hex literal or a `var(--token)` reference to
+// its hex form. Unknown tokens fall back to the muted text color so the UI can
+// never render `NaN` in an rgba() value.
+function resolveHex(color: string): string {
+  if (color.startsWith('#')) return color;
+  const match = /^var\((--[\w-]+)\)$/.exec(color.trim());
+  if (match) return TOKEN_HEX[match[1]] ?? '#5A6E9E';
+  return '#5A6E9E';
+}
+
+function hexToRgb(color: string): string {
+  const clean = resolveHex(color).replace('#', '');
   const r = parseInt(clean.slice(0, 2), 16);
   const g = parseInt(clean.slice(2, 4), 16);
   const b = parseInt(clean.slice(4, 6), 16);

@@ -20,6 +20,7 @@
 */
 
 #include <Servo.h>
+#include <string.h>
 
 // ---------------------------------------------------------------------------
 // Pin definitions
@@ -52,6 +53,11 @@ unsigned int thresholdGasWarning = 500;
 unsigned int thresholdFlameSafe = 200;
 unsigned int thresholdFlameWarning = 400;
 
+// Guard rails for runtime threshold updates (defense-in-depth against bad
+// serial input, matching the bridge's own validation).
+const unsigned int MIN_THRESHOLD = 1;
+const unsigned int MAX_THRESHOLD = 10000;
+
 bool armed = true;
 bool silenced = false;
 int servoAngle = 90;
@@ -59,10 +65,23 @@ int servoAngle = 90;
 // MQ2 calibration baseline captured at startup / via `calibrate`.
 int gasBaseline = 0;
 
+// A baseline is only accepted if the raw analog reading is below this value.
+// Higher readings imply gas is already present, so baselining then would
+// corrupt the span and skew subsequent PPM math.
+const int MAX_SAFE_BASELINE = 800;
+
 Servo servo;
-unsigned long lastSerialMillis = 0;
 unsigned long lastLoopMillis = 0;
 const unsigned long SERIAL_INTERVAL_MS = 1000;
+
+// Non-blocking alarm self-test state.
+bool alarmTestActive = false;
+unsigned long alarmTestEndMillis = 0;
+
+// Fixed-size serial command buffer. The firmware never allocates dynamic
+// memory; commands longer than this are safely truncated, never overrun.
+const unsigned int SERIAL_BUF_SIZE = 64;
+char serialBuf[SERIAL_BUF_SIZE];
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -135,60 +154,82 @@ void printTelemetry(int ppm, int flame) {
 }
 
 // ---------------------------------------------------------------------------
-// Serial command handling
+// Serial command handling (fixed-size buffers, no dynamic allocation)
 // ---------------------------------------------------------------------------
 
-void handleSetThreshold(const String& line) {
-  // Format: set_threshold:<sensor>:<level>:<value>
-  int first = line.indexOf(':');
-  int second = line.indexOf(':', first + 1);
-  int third = line.indexOf(':', second + 1);
-  if (first < 0 || second < 0 || third < 0) {
+void handleSetThreshold(const char* arg) {
+  // arg points past "set_threshold:" => "sensor:level:value"
+  char sensor[8];
+  char level[8];
+  int value = 0;
+  if (sscanf(arg, "%7s:%7s:%d", sensor, level, &value) != 3) {
     return;
   }
-  String sensor = line.substring(first + 1, second);
-  String level = line.substring(second + 1, third);
-  unsigned int value = line.substring(third + 1).toInt();
 
-  if (sensor == "gas") {
-    if (level == "safe") thresholdGasSafe = value;
-    else if (level == "warning") thresholdGasWarning = value;
-  } else if (sensor == "flame") {
-    if (level == "safe") thresholdFlameSafe = value;
-    else if (level == "warning") thresholdFlameWarning = value;
+  // Reject out-of-range values; never let thresholds cross.
+  if (value < (int)MIN_THRESHOLD || value > (int)MAX_THRESHOLD) {
+    return;
+  }
+
+  if (strcmp(sensor, "gas") == 0) {
+    if (strcmp(level, "safe") == 0) {
+      if (value < (int)thresholdGasWarning) thresholdGasSafe = value;
+    } else if (strcmp(level, "warning") == 0) {
+      if (value > (int)thresholdGasSafe) thresholdGasWarning = value;
+    }
+  } else if (strcmp(sensor, "flame") == 0) {
+    if (strcmp(level, "safe") == 0) {
+      if (value < (int)thresholdFlameWarning) thresholdFlameSafe = value;
+    } else if (strcmp(level, "warning") == 0) {
+      if (value > (int)thresholdFlameSafe) thresholdFlameWarning = value;
+    }
   }
 }
 
-void processCommand(const String& line) {
-  if (line == "silence") {
+void processCommand(const char* line) {
+  if (strcmp(line, "silence") == 0) {
     silenced = true;
-  } else if (line == "evacuate") {
+  } else if (strcmp(line, "evacuate") == 0) {
     silenced = false;
-  } else if (line == "toggle_armed") {
+  } else if (strcmp(line, "toggle_armed") == 0) {
     armed = !armed;
-  } else if (line == "reset") {
+  } else if (strcmp(line, "reset") == 0) {
     armed = true;
     silenced = false;
-  } else if (line == "calibrate") {
-    gasBaseline = analogRead(pinMQ2);
-  } else if (line == "test_alarm") {
-    setBuzzer(true);
-    delay(1000);
-    setBuzzer(false);
-  } else if (line.startsWith("servo:")) {
-    servoAngle = constrain(line.substring(6).toInt(), 0, 180);
+  } else if (strcmp(line, "calibrate") == 0) {
+    int reading = analogRead(pinMQ2);
+    if (reading < MAX_SAFE_BASELINE) {
+      gasBaseline = reading;
+    }
+  } else if (strcmp(line, "test_alarm") == 0) {
+    alarmTestActive = true;
+    alarmTestEndMillis = millis() + 1000;
+  } else if (strncmp(line, "servo:", 6) == 0) {
+    servoAngle = constrain(atoi(line + 6), 0, 180);
     servo.write(servoAngle);
-  } else if (line.startsWith("set_threshold:")) {
-    handleSetThreshold(line);
+  } else if (strncmp(line, "set_threshold:", 14) == 0) {
+    handleSetThreshold(line + 14);
   }
 }
 
 void readSerialCommands() {
   while (Serial.available() > 0) {
-    String line = Serial.readStringUntil('\n');
-    line.trim();
-    if (line.length() > 0) {
-      processCommand(line);
+    unsigned int n = Serial.readBytesUntil('\n', serialBuf, SERIAL_BUF_SIZE - 1);
+    if (n == 0) continue;
+    serialBuf[n] = '\0';
+
+    // Trim trailing whitespace / carriage return.
+    while (n > 0) {
+      char c = serialBuf[n - 1];
+      if (c == ' ' || c == '\t' || c == '\r') {
+        serialBuf[n - 1] = '\0';
+        n--;
+      } else {
+        break;
+      }
+    }
+    if (n > 0) {
+      processCommand(serialBuf);
     }
   }
 }
@@ -211,11 +252,24 @@ void setup() {
 
   // Allow the MQ2 a moment to stabilize, then capture a baseline.
   delay(2000);
-  gasBaseline = analogRead(pinMQ2);
+  int startup = analogRead(pinMQ2);
+  if (startup < MAX_SAFE_BASELINE) {
+    gasBaseline = startup;
+  }
 }
 
 void loop() {
   readSerialCommands();
+
+  // Non-blocking alarm self-test: keep the loop responsive.
+  if (alarmTestActive) {
+    if ((long)(millis() - alarmTestEndMillis) >= 0) {
+      alarmTestActive = false;
+      setBuzzer(false);
+    } else {
+      setBuzzer(true);
+    }
+  }
 
   unsigned long now = millis();
   if (now - lastLoopMillis >= SERIAL_INTERVAL_MS) {

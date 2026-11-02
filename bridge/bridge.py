@@ -168,6 +168,7 @@ def classify_status(readings, active_thresholds=None):
 
 def save_reading(data, status):
     """Save a telemetry reading to the SQLite history database."""
+    conn = None
     try:
         conn = sqlite3.connect(DB_PATH)
         cursor = conn.cursor()
@@ -192,9 +193,12 @@ def save_reading(data, status):
             ),
         )
         conn.commit()
-        conn.close()
     except sqlite3.Error as err:
         print("Database error:", err)
+    finally:
+        # Always release the connection, including on the error path.
+        if conn is not None:
+            conn.close()
 
 
 def _persist_thresholds():

@@ -233,7 +233,7 @@ export default function Home() {
                   label: 'Flame Intensity',
                   value: data?.flame ?? '—',
                   unit: '',
-                  status: data?.flame >= 600 ? 'DANGER' : data?.flame >= 400 ? 'WARNING' : 'SAFE',
+                  status: data?.flame >= 400 ? 'DANGER' : data?.flame >= 200 ? 'WARNING' : 'SAFE',
                   icon: '🔥',
                   trend: flameTrend,
                   trendValue: flameTrendValue,
