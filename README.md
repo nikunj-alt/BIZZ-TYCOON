@@ -5,6 +5,51 @@
 
 ---
 
+## 🤔 What is this? (plain English)
+
+GASTECT is a smart safety alarm for homes or small businesses. It watches the air
+for **gas leaks** and **fire**, like a smoke alarm — but smarter.
+
+Here's how it works, in simple terms:
+
+1. A small electronic board (**Arduino**) with sensors keeps an eye on the air and on open flames.
+2. If levels get too high, it **sounds a loud buzzer** and **glows a color**:
+   - 🟢 **Green** = all good
+   - 🟡 **Yellow** = be careful, levels are rising
+   - 🔴 **Red** = danger — gas or fire risk is high
+3. The readings are sent to a small program on your computer (the **bridge**).
+4. Your computer shows everything as a **live dashboard in your web browser** — the numbers, a 3D view, and a history of what has happened.
+
+You don't need to know how it works to use it. The dashboard does the thinking for you.
+
+---
+
+## 🧑‍💻 How to use it (step by step, no jargon)
+
+### First-time setup
+1. **Plug in the hardware.** Connect the Arduino board (with its gas/flame sensors) to your computer with a USB cable — or pair it over HC-05 Bluetooth.
+2. **Install the parts.** Run `./scripts/setup.sh` once.
+
+### Everyday use
+1. **Start everything.** Run `./scripts/start.sh` (on Windows, run it in Git Bash).
+2. **Open the dashboard.** In your web browser, go to **http://localhost:3000**.
+3. **Read the status.** The big number is the gas level. The color tells you if it's safe:
+   - 🟢 Green = fine.
+   - 🟡 Yellow = levels are creeping up — keep an eye on it.
+   - 🔴 Red = danger — evacuate and check for gas/fire.
+4. **Control the device from the dashboard:**
+   - 🔕 **Silence Alarm** — turn off the buzzer (e.g. after a false alarm).
+   - 🔊 **Test Sensors** — run a quick siren self-test.
+   - 🚪 **Valve / Servo** — open or close the gas cut-off valve.
+   - ⚙️ **Thresholds** — change the levels at which the alarm triggers (safe vs. warning).
+5. **Watch the history.** The "History" chart shows past readings, so you can spot trends.
+
+### When you're done
+- Leave the browser open and the bridge running, and the system keeps logging.
+- To stop, press **Ctrl+C** in the terminal window running the scripts.
+
+---
+
 ## 🚀 Quick Start (One Command)
 
 Clone the repository and run the setup script:
