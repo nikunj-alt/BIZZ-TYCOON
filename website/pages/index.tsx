@@ -26,6 +26,7 @@ const HomeCanvasContent = dynamic(() => import('@/components/three/r3f/HomeCanva
 });
 
 import clsx from 'clsx';
+import { GastectLiveBelt, type BeltModule } from '@/components/ui/gastect-live-belt';
 
 export default function Home() {
   const [data, setData] = useState<any>(null);
@@ -254,6 +255,86 @@ export default function Home() {
                 },
               ]}
             />
+          </ScrollReveal>
+
+          {/* Live Sensor Belt */}
+          <ScrollReveal variant="slideUp">
+            {(() => {
+              const beltItems: BeltModule[] = [
+                {
+                  id: 'gas',
+                  name: 'MQ-2 Gas Sensor',
+                  value: data?.ppm != null ? `${data.ppm} ppm` : '— ppm',
+                  status: data?.status === 'DANGER' ? 'DANGER' : data?.status === 'WARNING' ? 'WARNING' : 'SAFE',
+                  tier: data?.status === 'DANGER' ? 5 : data?.status === 'WARNING' ? 3 : 1,
+                  icon: 'gas',
+                  description: 'Detects LPG, methane and combustible gas leaks in real time. The first line of defence against a leak event.',
+                  details: ['Threshold warn ' + thresholds.warn + ' ppm', 'Threshold danger ' + thresholds.danger + ' ppm', 'Analog MQ-2', 'Heater preheated'],
+                },
+                {
+                  id: 'flame',
+                  name: 'Flame Sensor',
+                  value: data?.flame != null ? `${data.flame}` : '—',
+                  status: data?.flame >= 400 ? 'DANGER' : data?.flame >= 200 ? 'WARNING' : 'SAFE',
+                  tier: data?.flame >= 400 ? 5 : data?.flame >= 200 ? 4 : 2,
+                  icon: 'flame',
+                  description: 'Infrared flame detector that flags the presence of fire adjacent to the unit.',
+                  details: ['IR spectrum', 'Range 0–1023', '>= 400 → DANGER'],
+                },
+                {
+                  id: 'battery',
+                  name: 'Battery Level',
+                  value: data?.battery != null ? `${data.battery}%` : '—%',
+                  status: data?.battery <= 20 ? 'WARNING' : 'SAFE',
+                  tier: data?.battery <= 20 ? 4 : 1,
+                  icon: 'battery',
+                  description: 'System battery state. Keep above 20% to ensure uninterrupted monitoring.',
+                  details: ['Li-ion pack', '<= 20% warns', 'Low-power mode'],
+                },
+                {
+                  id: 'light',
+                  name: 'Ambient Light',
+                  value: data?.ldr != null ? `${data.ldr}` : '—',
+                  status: 'SAFE',
+                  tier: 1,
+                  icon: 'light',
+                  description: 'Photoresistor measuring ambient illumination around the unit.',
+                  details: ['LDR sensor', 'Range 0–1023'],
+                },
+                {
+                  id: 'motion',
+                  name: 'Motion (PIR)',
+                  value: data?.motion ? 'Detected' : 'Quiet',
+                  status: data?.motion ? 'WARNING' : 'SAFE',
+                  tier: data?.motion ? 3 : 1,
+                  icon: 'motion',
+                  description: 'Passive infrared motion detection for presence awareness in the protected space.',
+                  details: ['PIR sensor', 'Digital out'],
+                },
+                {
+                  id: 'servo',
+                  name: 'Servo Safety Valve',
+                  value: data?.servo === 180 ? 'Closed' : 'Open',
+                  status: data?.servo === 180 ? 'WARNING' : 'SAFE',
+                  tier: data?.servo === 180 ? 3 : 1,
+                  icon: 'system',
+                  description: 'Actuated gas valve. Closes automatically to stop the leak when danger is detected.',
+                  details: ['Servo actuation', '180° = closed'],
+                },
+              ];
+              return (
+                <GastectLiveBelt
+                  items={beltItems}
+                  eyebrow="Sentinel"
+                  heading="Live sensor stations"
+                  caption="Each module is a live readout from the GASTECT unit. Inspect any module to see its details, tier and state."
+                  speed={30}
+                  autoplay
+                  interval={3400}
+                  style={{ marginTop: 'var(--space-2xl)' }}
+                />
+              );
+            })()}
           </ScrollReveal>
 
           {/* Main Dashboard Grid */}
