@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>GASTECT — IoT Gas Leak &amp; Fire Detection System</title>
+<meta name="description" content="GASTECT is an affordable, local-first IoT gas leak and fire detection system — Arduino + Python WebSocket bridge + Next.js 3D dashboard. Built for the Bizz Tycoons 2026 competition." />
+<meta name="theme-color" content="#0A0F1A" />
+<link rel="icon" type="image/svg+xml" href="assets/logo.svg" />
+<style>
+  :root {
+    --bg: #0A0F1A;
+    --surface: #0D1B30;
+    --surface-2: #0B1526;
+    --border: #1D3450;
+    --text: #E6EDF7;
+    --muted: #8FA6C8;
+    --primary: #00D4C8;
+    --primary-2: #00E5FF;
+    --safe: #00E676;
+    --warning: #FFD600;
+    --danger: #FF3D00;
+    --radius: 16px;
+    --font: "Segoe UI", -apple-system, BlinkMacSystemFont, Roboto, Helvetica, Arial, sans-serif;
+    --mono: "Cascadia Code", "SF Mono", Consolas, monospace;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body {
+    font-family: var(--font);
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+  a { color: var(--primary); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  .wrap { max-width: 1120px; margin: 0 auto; padding: 0 24px; }
+
+  /* ---------- Topbar ---------- */
+  .topbar {
+    position: sticky; top: 0; z-index: 50;
+    background: rgba(10, 15, 26, 0.85);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border);
+  }
+  .topbar-inner {
+    display: flex; align-items: center; justify-content: space-between;
+    height: 64px;
+  }
+  .brand { display: flex; align-items: center; gap: 12px; }
+  .brand img { width: 34px; height: 34px; }
+  .brand-name { font-weight: 700; font-size: 18px; letter-spacing: 0.5px; }
+  .brand-name em { font-style: normal; color: var(--primary); }
+  .chip {
+    font-size: 12px; font-weight: 600; letter-spacing: 0.6px;
+    color: var(--warning); background: rgba(255, 214, 0, 0.10);
+    border: 1px solid rgba(255, 214, 0, 0.4);
+    padding: 5px 12px; border-radius: 999px; text-transform: uppercase;
+  }
+  .btn {
+    display: inline-flex; align-items: center; gap: 8px;
+    font-weight: 600; font-size: 14px;
+    padding: 10px 18px; border-radius: 999px; border: 1px solid transparent;
+    cursor: pointer; transition: transform .15s ease, box-shadow .15s ease, background .15s ease;
+    white-space: nowrap;
+  }
+  .btn:hover { transform: translateY(-1px); text-decoration: none; }
+  .btn-primary { background: var(--primary); color: #04121a; box-shadow: 0 0 24px rgba(0,212,200,.35); }
+  .btn-primary:hover { background: var(--primary-2); box-shadow: 0 0 30px rgba(0,229,255,.45); }
+  .btn-ghost { border-color: var(--border); color: var(--text); background: transparent; }
+  .btn-ghost:hover { border-color: var(--primary); color: var(--primary); }
+  .btn-row { display: flex; gap: 14px; flex-wrap: wrap; justify-content: center; }
+
+  /* ---------- Hero ---------- */
+  .hero { padding: 48px 0 64px; text-align: center; }
+  .hero-banner { width: 100%; max-width: 980px; margin: 0 auto 28px; display: block; }
+  .hero h1 { font-size: clamp(28px, 5vw, 44px); font-weight: 800; letter-spacing: .5px; }
+  .hero h1 span { color: var(--primary); }
+  .hero .tagline { color: var(--muted); font-size: 18px; max-width: 640px; margin: 14px auto 28px; }
+  .hero .badges { margin-top: 26px; display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; }
+  .badge {
+    font-size: 13px; color: var(--muted);
+    border: 1px solid var(--border); background: var(--surface-2);
+    padding: 6px 14px; border-radius: 999px;
+  }
+  .badge b { color: var(--text); font-weight: 600; }
+
+  /* ---------- Sections ---------- */
+  .section { padding: 56px 0; }
+  .section.alt { background: var(--surface-2); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+  .section-head { text-align: center; margin-bottom: 40px; }
+  .section-head .kicker { color: var(--primary); font-size: 13px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; }
+  .section-head h2 { font-size: 30px; font-weight: 700; margin-top: 6px; }
+  .section-head p { color: var(--muted); max-width: 620px; margin: 10px auto 0; }
+
+  /* Features */
+  .grid { display: grid; gap: 18px; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); }
+  .card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 24px; position: relative; overflow: hidden;
+  }
+  .card::before { content: ""; position: absolute; top: 0; left: 0; right: 0; height: 3px; background: var(--accent, var(--primary)); }
+  .card .icon { font-size: 30px; }
+  .card h3 { margin: 12px 0 8px; font-size: 18px; }
+  .card p { color: var(--muted); font-size: 15px; }
+
+  /* Pipeline */
+  .pipe { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 14px; }
+  .step { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; text-align: center; }
+  .step .n { font-family: var(--mono); font-size: 13px; color: var(--primary); letter-spacing: 1px; }
+  .step h4 { margin: 8px 0 4px; font-size: 16px; }
+  .step p { color: var(--muted); font-size: 13px; }
+
+  /* Table */
+  table { width: 100%; border-collapse: collapse; font-size: 15px; background: var(--surface); border-radius: var(--radius); overflow: hidden; border: 1px solid var(--border); }
+  th, td { text-align: left; padding: 12px 16px; border-bottom: 1px solid var(--border); }
+  th { background: var(--surface-2); color: var(--primary); font-weight: 600; font-size: 13px; letter-spacing: .5px; text-transform: uppercase; }
+  tr:last-child td { border-bottom: none; }
+  td .mono { font-family: var(--mono); font-size: 13px; color: var(--muted); }
+  .scrollable { overflow-x: auto; }
+
+  /* Tech chips */
+  .chips { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; }
+  .chips .badge b { color: var(--primary); }
+
+  /* Footer */
+  footer { border-top: 1px solid var(--border); padding: 32px 0; text-align: center; color: var(--muted); font-size: 14px; }
+  footer a { color: var(--primary); }
+
+  @media (max-width: 640px) {
+    .topbar-inner { height: 56px; }
+    .chip { display: none; }
+    .hero { padding: 32px 0 48px; }
+  }
+</style>
+</head>
+<body>
+
+  <!-- Topbar -->
+  <header class="topbar">
+    <div class="wrap topbar-inner">
+      <div class="brand">
+        <img src="assets/logo.svg" alt="GASTECT logo" />
+        <span class="brand-name">GASTECT<em>.</em></span>
+      </div>
+      <div style="display:flex;align-items:center;gap:14px;">
+        <span class="chip">🏆 Bizz Tycoons 2026</span>
+        <a class="btn btn-ghost" href="https://github.com/nikunj-alt/BIZZ-TYCOON" target="_blank" rel="noopener">GitHub&#8599;</a>
+      </div>
+    </div>
+  </header>
+
+  <!-- Hero -->
+  <section class="hero">
+    <div class="wrap">
+      <img class="hero-banner" src="assets/banner.svg" alt="GASTECT — IoT Gas Leak & Fire Detection System" />
+      <h1>Smart safety for gas &amp; <span>fire</span></h1>
+      <p class="tagline">
+        An affordable, local-first IoT system that watches the air for gas leaks and fire —
+        with real-time telemetry, three-tier alerting, and an immersive 3D dashboard.
+      </p>
+      <div class="btn-row">
+        <a class="btn btn-primary" href="https://github.com/nikunj-alt/BIZZ-TYCOON" target="_blank" rel="noopener">View Source on GitHub</a>
+        <a class="btn btn-ghost" href="#features">Explore the System</a>
+      </div>
+      <div class="badges">
+        <span class="badge"><b>Arduino</b> hardware</span>
+        <span class="badge"><b>Python</b> WebSocket bridge</span>
+        <span class="badge"><b>Next.js</b> 3D dashboard</span>
+        <span class="badge"><b>SQLite</b> history</span>
+        <span class="badge"><b>Local-first</b> architecture</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- What is it -->
+  <section class="section alt" id="about">
+    <div class="wrap">
+      <div class="section-head">
+        <span class="kicker">About</span>
+        <h2>What is GASTECT?</h2>
+        <p>
+          GASTECT is a smart safety alarm for homes and small businesses. It combines an
+          Arduino Uno with gas, flame, motion, and ambient-light sensors to detect hazards
+          early — then alerts you with colors, tones, and a live dashboard you can read at a glance.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Features -->
+  <section class="section" id="features">
+    <div class="wrap">
+      <div class="section-head">
+        <span class="kicker">Capabilities</span>
+        <h2>Engineered for reliability</h2>
+        <p>Every layer built to respond in real time and survive poor conditions.</p>
+      </div>
+      <div class="grid">
+        <div class="card" style="--accent:var(--primary)">
+          <div class="icon">🔬</div><h3>10 integrated sensors</h3>
+          <p>Gas (MQ2), flame, PIR motion, LDR light, touch, joystick, buzzer, servo valve, battery monitor, and system status.</p>
+        </div>
+        <div class="card" style="--accent:var(--safe)">
+          <div class="icon">⚡</div><h3>Real-time pipeline</h3>
+          <p>Arduino C++ → HC-05 Bluetooth → Python WebSocket bridge → Next.js dashboard, with sub-100ms latency.</p>
+        </div>
+        <div class="card" style="--accent:var(--primary)">
+          <div class="icon">🎨</div><h3>Immersive 3D visuals</h3>
+          <p>Three.js + React Three Fiber particle systems, morphing geometry, and status-reactive lighting.</p>
+        </div>
+        <div class="card" style="--accent:var(--warning)">
+          <div class="icon">🛡️</div><h3>Three-tier alerting</h3>
+          <p>SAFE · WARNING · DANGER with distinct colors, tones, and one-tap evacuation.</p>
+        </div>
+        <div class="card" style="--accent:var(--danger)">
+          <div class="icon">🌐</div><h3>End-to-end data</h3>
+          <p>Firmware → Bluetooth serial → Python bridge → SQLite history → dashboard.</p>
+        </div>
+        <div class="card" style="--accent:var(--primary)">
+          <div class="icon">🔒</div><h3>Local-first</h3>
+          <p>Zero cloud dependency for competition reliability — runs entirely on localhost.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Pipeline -->
+  <section class="section alt">
+    <div class="wrap">
+      <div class="section-head">
+        <span class="kicker">How it works</span>
+        <h2>From sensor to screen</h2>
+      </div>
+      <div class="pipe">
+        <div class="step"><div class="n">01</div><h4>Hardware</h4><p>Arduino Uno reads the sensors and runs the actuator logic.</p></div>
+        <div class="step"><div class="n">02</div><h4>Communication</h4><p>HC-05 Bluetooth / serial streams JSON telemetry at 1 Hz.</p></div>
+        <div class="step"><div class="n">03</div><h4>Bridge</h4><p>Python WebSocket server parses, classifies, and logs readings.</p></div>
+        <div class="step"><div class="n">04</div><h4>Dashboard</h4><p>Next.js renders live 3D visuals, charts, and controls.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Hardware -->
+  <section class="section" id="hardware">
+    <div class="wrap">
+      <div class="section-head">
+        <span class="kicker">Hardware</span>
+        <h2>Target BOM: ₹1200</h2>
+        <p>An approachable, affordable parts list designed for a school budget.</p>
+      </div>
+      <div class="scrollable">
+        <table>
+          <thead><tr><th>Component</th><th>Function</th><th>Interface</th></tr></thead>
+          <tbody>
+            <tr><td><b>Arduino Uno</b></td><td>Microcontroller</td><td class="mono">USB / Serial</td></tr>
+            <tr><td><b>MQ2 Sensor</b></td><td>LPG / smoke / methane PPM</td><td class="mono">Analog A0</td></tr>
+            <tr><td><b>Flame Sensor</b></td><td>IR fire detection</td><td class="mono">Analog A1</td></tr>
+            <tr><td><b>LDR</b></td><td>Ambient light</td><td class="mono">Analog A2</td></tr>
+            <tr><td><b>PIR Sensor</b></td><td>Motion detection</td><td class="mono">Digital 2</td></tr>
+            <tr><td><b>Touch Sensor</b></td><td>Alarm silence</td><td class="mono">Digital 3</td></tr>
+            <tr><td><b>Joystick</b></td><td>Manual override / navigation</td><td class="mono">A3/A4, 4</td></tr>
+            <tr><td><b>RGB LEDs</b></td><td>Status indication</td><td class="mono">Digital 5/6/7</td></tr>
+            <tr><td><b>Buzzer</b></td><td>Audible alarm</td><td class="mono">Digital 8</td></tr>
+            <tr><td><b>Servo Valve</b></td><td>Gas cut-off</td><td class="mono">Digital 9</td></tr>
+            <tr><td><b>Battery Sense</b></td><td>Power monitoring</td><td class="mono">Analog A5</td></tr>
+            <tr><td><b>HC-05</b></td><td>Bluetooth link</td><td class="mono">Serial TX/RX</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- Tech stack -->
+  <section class="section alt">
+    <div class="wrap">
+      <div class="section-head">
+        <span class="kicker">Technology</span>
+        <h2>The stack behind the system</h2>
+      </div>
+      <div class="chips">
+        <span class="badge"><b>C++</b> Arduino firmware</span>
+        <span class="badge"><b>Python 3.10+</b> asyncio · websockets</span>
+        <span class="badge"><b>Next.js 14</b> TypeScript</span>
+        <span class="badge"><b>Three.js / R3F</b> 3D viz</span>
+        <span class="badge"><b>Framer Motion</b> animation</span>
+        <span class="badge"><b>SQLite</b> history logging</span>
+        <span class="badge"><b>GitHub Actions</b> CI/CD</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer>
+    <div class="wrap">
+      <p><b>GASTECT</b> — IoT Gas Leak &amp; Fire Detection System</p>
+      <p style="margin-top:6px;">
+        Built for the <a href="https://github.com/nikunj-alt/BIZZ-TYCOON">Bizz Tycoons 2026</a> competition ·
+        MIT License · <a href="https://github.com/nikunj-alt/BIZZ-TYCOON" target="_blank" rel="noopener">Source on GitHub</a>
+      </p>
+    </div>
+  </footer>
+
+</body>
+</html>
