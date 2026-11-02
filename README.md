@@ -25,6 +25,41 @@ Open your browser at **http://localhost:3000**.
 
 ---
 
+## 🧱 Architecture
+
+```
+┌──────────────┐   Serial (USB / HC-05)   ┌──────────────────┐
+│  Arduino Uno │ ───────────────────────▶ │  Python Bridge   │
+│  GASTECT    │                          │  bridge.py       │
+└──────────────┘                          │  ws://localhost  │
+        ▲                                 │  :8765           │
+        │ telemetry (JSON, 1 Hz)          └────────┬─────────┘
+        │                                        │  │
+        │                                        │  └─▶ SQLite (database/history.db)
+        │                                        ▼
+        │                               ┌──────────────────┐
+        └────── commands (silence, ───▶ │  Next.js 14      │
+                evacuate, servo,         │  Dashboard       │
+                set_threshold, …)        │  localhost:3000  │
+                                          └──────────────────┘
+```
+
+- **Arduino Uno** reads gas (MQ2), flame, LDR, PIR motion, touch, joystick and battery voltage, classifies status, and streams JSON telemetry over serial at 1 Hz.
+- The **Python bridge** (`bridge.py`) parses telemetry, classifies it against thresholds, persists every reading to SQLite, and broadcasts it to connected WebSocket clients. It also relays validated commands back to the device.
+- The **Next.js dashboard** (TypeScript) subscribes to the WebSocket for live data and reads history from `/api/history`.
+
+### Threshold model (two-level)
+
+| Level | Condition | Status |
+|-------|-----------|--------|
+| SAFE | below `safe` | 🟢 SAFE |
+| WARNING | `safe` … `warning` − 1 | 🟡 WARNING |
+| DANGER | at or above `warning` | 🔴 DANGER |
+
+Defaults: gas `200/500`, flame `200/400`. Overall status escalates to DANGER if **either** sensor reaches its warning threshold. Thresholds are tunable at runtime via `set_threshold` and persist back to `config/config.yaml`.
+
+---
+
 ## 📂 Project Structure
 
 ```
@@ -36,13 +71,14 @@ GASTECT_Project/
 ├── vercel.json
 ├── Dockerfile
 ├── arduino/
-│   └── GASTECT_Arduino.ino          # C++ Arduino firmware
+│   └── GASTECT_Arduino.ino          # C++ Arduino firmware (fixed-size buffers, non-blocking)
 ├── bridge/
 │   ├── bridge.py                    # Python serial-to-WebSocket bridge
 │   ├── init_db.py                   # SQLite history DB initializer
+│   ├── test_bridge.py               # Unit tests (status, thresholds, commands)
 │   └── requirements.txt             # Python dependencies
 ├── config/
-│   ├── config.yaml                  # YAML configuration
+│   ├── config.yaml                  # YAML configuration (port, baud, thresholds)
 │   └── bridge.ini                   # INI configuration alternative
 ├── database/
 │   └── history.db                   # SQLite historical logs
@@ -50,21 +86,23 @@ GASTECT_Project/
 │   ├── setup.sh                     # Environment setup
 │   ├── start.sh                     # Local launch script
 │   └── start-vercel-mode.sh         # Tunnel + Vercel launcher
-├── website/
+├── website/                         # Next.js 14 (TypeScript)
 │   ├── pages/
-│   │   ├── index.js                 # Main dashboard
-│   │   └── about.js                 # Project info & team
+│   │   ├── index.tsx                # Live dashboard (3D, cards, controls)
+│   │   ├── about.tsx                # Project info & team
+│   │   └── api/history.ts           # SQLite history endpoint (graceful degradation)
 │   ├── components/
-│   │   ├── Display.tsx              # Sensor readout tile
-│   │   ├── StatusIndicator.tsx      # SAFE / WARNING / HAZARD banner
-│   │   ├── SevenSegment.tsx         # SVG 7-segment PPM readout
-│   │   ├── HistoryGraph.tsx         # Historical trend chart
-│   │   └── Controls.tsx             # Valve / buzzer controls
+│   │   ├── ui/                      # AlertBanner, ControlPanel, HeroSection,
+│   │   │                            # HistoryChart3D, Navigation, ReadingCard, SensorGrid, Footer
+│   │   ├── three/                   # 3D visualizations (plain + R3F)
+│   │   └── providers/
 │   ├── styles/
-│   │   globals.css
+│   │   ├── design-system.css        # Design tokens (colors, spacing, radii)
+│   │   └── globals.css
 │   ├── package.json
 │   └── tsconfig.json
 └── docs/
+    ├── api_spec.md                  # WebSocket contract & REST API spec
     ├── test_protocols.md            # Demo test scenarios
     └── pitch_notes.md               # 3-minute Shark Tank pitch script
 ```
@@ -77,21 +115,42 @@ GASTECT_Project/
 |-----------|----------|-----------------|
 | **Arduino Uno** | Microcontroller | USB / Serial |
 | **MQ2 Sensor** | LPG/Smoke/Methane PPM | Analog A0 |
-| **Flame Sensor** | IR Fire detection | Analog A1 |
-| **HC-05** | Bluetooth HC-05 module | Serial TX/RX (9600 baud) |
-| **PIR Sensor** | Motion detection | Digital Pin |
-| **LDR** | Day/Night ambient light | Analog Pin |
-| **Touch Sensor** | Alarm silence button | Digital Pin |
-| **7-Segment Display** | Local PPM readout | Pins 8-13 |
-| **Buzzer / LEDs** | Audible/visual alerts | PWM / Digital |
+| **Flame Sensor** | IR fire detection | Analog A1 |
+| **LDR** | Day/night ambient light | Analog A2 |
+| **PIR Sensor** | Motion detection | Digital 2 |
+| **Touch Sensor** | Alarm silence button | Digital 3 (INPUT_PULLUP) |
+| **Joystick** | Manual override / navigation | Analog A3/A4, Digital 4 |
+| **RGB Status LEDs** | SAFE/WARNING/DANGER indication | Digital 5/6/7 |
+| **Buzzer** | Audible alarm (silenceable) | Digital 8 |
+| **Servo Valve** | Gas cut-off valve | Digital 9 |
+| **Battery Sense** | Power level monitoring | Analog A5 |
+| **HC-05** | Bluetooth module (alternative link) | Serial TX/RX (9600 baud) |
 
 ---
 
 ## 🌐 Vercel & Remote Mode
 
 For deploying the frontend on Vercel while keeping the physical Bluetooth/serial bridge running locally on your computer:
-1. Run `./scripts/start-vercel-mode.sh` to start the bridge and public tunnel (ngrok/Cloudflare).
+
+1. Run `./scripts/start-vercel-mode.sh` to start the bridge and public tunnel (ngrok/Cloudflare). The script cleans up background processes on exit.
 2. Set `NEXT_PUBLIC_WS_URL` in Vercel to your public tunnel WebSocket URL.
+
+> **Note:** the `/api/history` endpoint reads a local SQLite file, so on serverless deployments it gracefully returns an empty history rather than failing. Historical data is best viewed from the local dashboard.
+
+---
+
+## ✅ Development & Testing
+
+```bash
+# Frontend production build (must pass)
+cd website && npm run build
+
+# Python lint (must score ≥ 9.0)
+python -m pylint bridge.py init_db.py
+
+# Bridge unit tests
+python -m pytest bridge/test_bridge.py
+```
 
 ---
 
