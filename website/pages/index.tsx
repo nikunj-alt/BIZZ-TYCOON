@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { usePathname } from 'next/navigation';
 import { HeroSection } from '@/components/ui/HeroSection';
@@ -35,6 +35,11 @@ export default function Home() {
   const [toasts, setToasts] = useState<Array<{ id: string; type: 'success' | 'warning' | 'error' | 'info'; title: string; message?: string }>>([]);
   const wsRef = useRef<WebSocket | null>(null);
   const wsUrl = process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:8765';
+
+  // Reconnect backoff: max 10 attempts, delay grows as 2000 * attempt ms.
+  const MAX_RECONNECT_ATTEMPTS = 10;
+  const reconnectAttemptRef = useRef(0);
+  const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pathname = usePathname();
   const reducedMotion = useReducedMotion();
 
@@ -47,44 +52,24 @@ export default function Home() {
     setToasts(prev => prev.filter(t => t.id !== id));
   };
 
-  const handleConnect = () => {
-    if (wsRef.current?.readyState === WebSocket.OPEN) return;
-    window.location.reload();
-  };
-
-  const handleDisconnect = () => {
-    if (wsRef.current) wsRef.current.close();
-  };
-
-  const handleCommand = (command: string, params = {}) => {
-    if (wsRef.current?.readyState === WebSocket.OPEN) {
-      wsRef.current.send(JSON.stringify({ command, ...params }));
-      addToast('info', 'Command Sent', `${command}${Object.keys(params).length ? ` ${JSON.stringify(params)}` : ''}`);
-    } else {
-      addToast('error', 'Not Connected', 'Please connect to the device first');
+  const connect = useCallback(() => {
+    // Clear any pending reconnect timer.
+    if (reconnectTimerRef.current) {
+      clearTimeout(reconnectTimerRef.current);
+      reconnectTimerRef.current = null;
     }
-  };
 
-  const handleThresholdChange = (warn: number, danger: number) => {
-    setThresholds({ warn, danger });
-    handleCommand('set_threshold', { warn, danger });
-  };
+    const attempt = reconnectAttemptRef.current;
+    if (attempt > MAX_RECONNECT_ATTEMPTS) {
+      addToast('error', 'Connection Failed', 'Could not reconnect to the bridge');
+      return;
+    }
 
-  const handleSilence = () => {
-    handleCommand('silence');
-    addToast('success', 'Alarm Silenced', 'Buzzer has been silenced');
-  };
-
-  const handleEvacuate = () => {
-    addToast('error', 'EVACUATION INITIATED', 'Follow emergency protocols immediately!');
-    handleCommand('evacuate');
-  };
-
-  useEffect(() => {
     const ws = new WebSocket(wsUrl);
     wsRef.current = ws;
 
     ws.onopen = () => {
+      reconnectAttemptRef.current = 0;
       console.log('Connected to GASTECT bridge');
       setConnected(true);
       addToast('success', 'Connected', 'WebSocket connection established');
@@ -93,12 +78,13 @@ export default function Home() {
     ws.onclose = () => {
       console.log('Disconnected from bridge');
       setConnected(false);
-      addToast('warning', 'Disconnected', 'WebSocket connection lost. Reconnecting...');
-      setTimeout(() => {
-        if (wsRef.current?.readyState === WebSocket.CLOSED) {
-          window.location.reload();
-        }
-      }, 3000);
+      reconnectAttemptRef.current += 1;
+      if (reconnectAttemptRef.current <= MAX_RECONNECT_ATTEMPTS) {
+        addToast('warning', 'Disconnected', `WebSocket connection lost. Reconnecting (attempt ${reconnectAttemptRef.current})...`);
+        reconnectTimerRef.current = setTimeout(connect, 2000 * reconnectAttemptRef.current);
+      } else {
+        addToast('error', 'Connection Failed', 'Maximum reconnect attempts reached. Click Connect to retry.');
+      }
     };
 
     ws.onerror = (error) => {
@@ -115,14 +101,55 @@ export default function Home() {
           return;
         }
         setData(payload);
-        setHistory(prev => [...prev.slice(-59), { ...payload, timestamp: Date.now() }]);
+        setHistory(prev => [...prev.slice(-59), { ...payload, timestamp: payload.timestamp }]);
       } catch (e) {
         console.error('Failed to parse message:', e);
       }
     };
-
-    return () => ws.close();
   }, [wsUrl]);
+
+  const handleConnect = () => {
+    if (wsRef.current?.readyState === WebSocket.OPEN) return;
+    reconnectAttemptRef.current = 0;
+    connect();
+  };
+
+  const handleDisconnect = () => {
+    if (wsRef.current) wsRef.current.close();
+  };
+
+  const handleCommand = (command: string, params = {}) => {
+    if (wsRef.current?.readyState === WebSocket.OPEN) {
+      wsRef.current.send(JSON.stringify({ command, params }));
+      addToast('info', 'Command Sent', `${command}${Object.keys(params).length ? ` ${JSON.stringify(params)}` : ''}`);
+    } else {
+      addToast('error', 'Not Connected', 'Please connect to the device first');
+    }
+  };
+
+  const handleThresholdChange = (warn: number, danger: number) => {
+    setThresholds({ warn, danger });
+    handleCommand('set_threshold', { sensor: 'gas', level: 'safe', value: warn });
+    handleCommand('set_threshold', { sensor: 'gas', level: 'warning', value: danger });
+  };
+
+  const handleSilence = () => {
+    handleCommand('silence');
+    addToast('success', 'Alarm Silenced', 'Buzzer has been silenced');
+  };
+
+  const handleEvacuate = () => {
+    addToast('error', 'EVACUATION INITIATED', 'Follow emergency protocols immediately!');
+    handleCommand('evacuate');
+  };
+
+  useEffect(() => {
+    connect();
+    return () => {
+      if (reconnectTimerRef.current) clearTimeout(reconnectTimerRef.current);
+      wsRef.current?.close();
+    };
+  }, [connect]);
 
   // Prepare sensor data for grid
   const sensorData: SensorData[] = [
@@ -169,6 +196,8 @@ export default function Home() {
             status={data?.status || 'UNKNOWN'}
             ppm={data?.ppm || 0}
             flame={data?.flame || 0}
+            warn={thresholds.warn}
+            danger={thresholds.danger}
             onSilence={handleSilence}
             onEvacuate={handleEvacuate}
             onDismiss={() => {}}
@@ -181,6 +210,8 @@ export default function Home() {
             connected={connected}
             flame={data?.flame || 0}
             battery={data?.battery || 0}
+            onSilence={handleSilence}
+            onTest={() => handleCommand('test_alarm')}
           />
 
           {/* Reading Cards Grid */}
@@ -229,12 +260,7 @@ export default function Home() {
           <ScrollReveal variant="slideUp">
             <div
               className="dashboard-grid"
-              style={{
-                display: 'grid',
-                gridTemplateColumns: '1fr 320px',
-                gap: 'var(--space-xl)',
-                marginTop: 'var(--space-2xl)',
-              }}
+              style={{ marginTop: 'var(--space-2xl)' }}
             >
               {/* Left Column */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-xl)' }}>
@@ -293,6 +319,8 @@ export default function Home() {
                 <HistoryChart3D
                   history={history.map(h => ({ ppm: h.ppm, flame: h.flame, timestamp: h.timestamp }))}
                   height="300px"
+                  warn={thresholds.warn}
+                  danger={thresholds.danger}
                 />
 
                 {/* Sensor Grid 2D */}

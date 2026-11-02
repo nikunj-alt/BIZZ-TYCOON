@@ -79,7 +79,7 @@ thresholds = {"gas": {"safe": 200, "warning": 500},
               "flame": {"safe": 200, "warning": 400}}
 
 # When True, the bridge runs without hardware using synthetic telemetry.
-SIMULATE = False
+simulate = False
 
 
 # ---------------------------------------------------------------------------
@@ -462,7 +462,7 @@ async def main():
     asyncio.create_task(serial_writer())
     async with websockets.serve(handler, "localhost", WS_PORT):
         print(f"WebSocket server started at ws://localhost:{WS_PORT}")
-        if SIMULATE:
+        if simulate:
             print("Running in SIMULATION mode (no hardware required).")
             await broadcast_simulated()
         elif PORT is None:
@@ -490,5 +490,5 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
     if args.simulate:
-        SIMULATE = True
+        simulate = True
     asyncio.run(main())

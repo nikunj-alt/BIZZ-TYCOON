@@ -14,12 +14,14 @@ import clsx from 'clsx';
 extend({ Line, Points, Mesh, Group, OrthographicCamera, LineSegments, BufferGeometry, Float32BufferAttribute, LineBasicMaterial, MeshBasicMaterial, PointsMaterial });
 
 interface HistoryChart3DProps {
-  history: Array<{ ppm: number; flame: number; timestamp: number }>;
+  history: Array<{ ppm: number; flame: number; timestamp: number | string }>;
   className?: string;
   height?: string;
+  warn?: number;
+  danger?: number;
 }
 
-export function HistoryChart3D({ history, className = '', height = '300px' }: HistoryChart3DProps) {
+export function HistoryChart3D({ history, className = '', height = '300px', warn = 200, danger = 500 }: HistoryChart3DProps) {
   const reducedMotion = useReducedMotion();
   const [dataHistory, setDataHistory] = useState(history.slice(-200));
   const [maxPPM, setMaxPPM] = useState(1000);
@@ -32,7 +34,7 @@ export function HistoryChart3D({ history, className = '', height = '300px' }: Hi
 
   const config = useMemo(() => {
     const latestPPM = dataHistory[dataHistory.length - 1]?.ppm ?? 0;
-    const status = latestPPM >= 500 ? 'DANGER' : latestPPM >= 200 ? 'WARNING' : 'SAFE';
+    const status = latestPPM >= danger ? 'DANGER' : latestPPM >= warn ? 'WARNING' : 'SAFE';
 
     switch (status) {
       case 'DANGER':
@@ -42,7 +44,7 @@ export function HistoryChart3D({ history, className = '', height = '300px' }: Hi
       default:
         return { lineColor: 0x00e676, fillColor: 0x00e676, glowColor: 0x00d4c8, particleColor: 0x00ffb3 };
     }
-  }, [dataHistory]);
+  }, [dataHistory, warn, danger]);
 
   return (
     <ScrollReveal variant="slideUp" className={clsx('history-chart-3d', className)}>
@@ -66,7 +68,7 @@ export function HistoryChart3D({ history, className = '', height = '300px' }: Hi
           <fog attach="fog" args={['#0A0F1A', 5, 50]} />
           <ambientLight intensity={0.4} />
           <directionalLight color={config.lineColor} intensity={0.6} position={[5, 10, 5]} />
-          <HistoryChartCore dataHistory={dataHistory} config={config} maxPPM={maxPPM} reducedMotion={reducedMotion} />
+          <HistoryChartCore dataHistory={dataHistory} config={config} maxPPM={maxPPM} warn={warn} danger={danger} reducedMotion={reducedMotion} />
         </Canvas>
 
         {/* Overlay info */}
@@ -139,9 +141,9 @@ export function HistoryChart3D({ history, className = '', height = '300px' }: Hi
           }}
           aria-hidden="true"
         >
-          <LegendItem color="#ff3d00" label="DANGER ≥ 500" />
-          <LegendItem color="#ffd600" label="WARN ≥ 200" />
-          <LegendItem color="#00e676" label="SAFE < 200" />
+          <LegendItem color="#ff3d00" label={`DANGER ≥ ${danger}`} />
+          <LegendItem color="#ffd600" label={`WARN ≥ ${warn}`} />
+          <LegendItem color="#00e676" label={`SAFE < ${warn}`} />
         </div>
       </div>
     </ScrollReveal>
@@ -165,7 +167,7 @@ function LegendItem({ color, label }: { color: string; label: string }) {
   );
 }
 
-function HistoryChartCore({ dataHistory, config, maxPPM, reducedMotion }: { dataHistory: Array<{ ppm: number; flame: number; timestamp: number }>; config: any; maxPPM: number; reducedMotion: boolean }) {
+function HistoryChartCore({ dataHistory, config, maxPPM, warn, danger, reducedMotion }: { dataHistory: Array<{ ppm: number; flame: number; timestamp: number | string }>; config: any; maxPPM: number; warn: number; danger: number; reducedMotion: boolean }) {
   const clockRef = useRef<THREE.Clock | null>(null);
   const lineRef = useRef<THREE.Line>(null);
   const fillRef = useRef<THREE.Mesh>(null);
@@ -314,13 +316,13 @@ function HistoryChartCore({ dataHistory, config, maxPPM, reducedMotion }: { data
       <group ref={thresholdRef}>
         <line>
           <bufferGeometry>
-            <float32BufferAttribute array={new Float32Array([-8, -4 + (200 / maxPPM) * 8, 0, 8, -4 + (200 / maxPPM) * 8, 0])} itemSize={3} />
+            <float32BufferAttribute array={new Float32Array([-8, -4 + (warn / maxPPM) * 8, 0, 8, -4 + (warn / maxPPM) * 8, 0])} itemSize={3} />
           </bufferGeometry>
           <lineBasicMaterial color={0xffd600} transparent opacity={0.4} />
         </line>
         <line>
           <bufferGeometry>
-            <float32BufferAttribute array={new Float32Array([-8, -4 + (500 / maxPPM) * 8, 0, 8, -4 + (500 / maxPPM) * 8, 0])} itemSize={3} />
+            <float32BufferAttribute array={new Float32Array([-8, -4 + (danger / maxPPM) * 8, 0, 8, -4 + (danger / maxPPM) * 8, 0])} itemSize={3} />
           </bufferGeometry>
           <lineBasicMaterial color={0xff3d00} transparent opacity={0.4} />
         </line>

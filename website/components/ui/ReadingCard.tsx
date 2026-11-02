@@ -268,15 +268,13 @@ export interface ReadingCardGridProps {
   className?: string;
 }
 
-export function ReadingCardGrid({ cards, columns = 4, gap = 'var(--space-md)', className = '' }: ReadingCardGridProps) {
+export function ReadingCardGrid({ cards, gap = 'var(--space-md)', className = '' }: ReadingCardGridProps) {
   const reducedMotion = useReducedMotion();
 
   return (
     <motion.div
       className={clsx('reading-card-grid', className)}
       style={{
-        display: 'grid',
-        gridTemplateColumns: `repeat(${columns}, 1fr)`,
         gap,
         width: '100%',
       }}

@@ -93,8 +93,8 @@ function AboutHeroContent() {
         }}
       >
         A complete local-first IoT solution for real-time gas leak detection,
-        featuring 17 sensors, three-tier alerting, 3D visualizations, and
-        multilingual support — built for the Bizz Tycoons competition.
+        featuring multi-sensor telemetry, three-tier alerting, and 3D
+        visualizations — built for the Bizz Tycoons competition.
       </motion.p>
 
       <motion.div
@@ -118,8 +118,8 @@ function AboutHeroContent() {
 const features = [
   {
     icon: '🔬',
-    title: '17 Hardware Sensors',
-    description: 'MQ2 Gas, Flame, PIR Motion, LDR Light, Touch, Joystick, 7-Segment Display, RGB LEDs, Buzzer, Servo Valve, Battery Monitor, and more',
+    title: '10 Integrated Sensors & Controls',
+    description: 'MQ2 Gas, Flame, PIR Motion, LDR Light, Touch, Joystick, Buzzer, Servo Valve, Battery Monitor, and system status',
     color: 'var(--brand-primary)',
   },
   {
@@ -137,13 +137,13 @@ const features = [
   {
     icon: '🛡️',
     title: 'Three-Tier Alerting',
-    description: 'SAFE (<200 PPM), WARNING (200-499 PPM), DANGER (≥500 PPM) with distinct colors, sounds, haptics, and auto-evacuation triggers',
+    description: 'SAFE (<200 PPM), WARNING (200–499 PPM), DANGER (≥500 PPM) with distinct colors, tones, and one-tap evacuation',
     color: 'var(--danger)',
   },
   {
     icon: '🌐',
-    title: '15-Language Stack',
-    description: 'C++, C, Python, Bash, JavaScript, TypeScript, HTML, CSS, SVG, JSON, YAML, INI, SQL, Dockerfile, Markdown',
+    title: 'End-to-End Data Pipeline',
+    description: 'C++ firmware → Bluetooth serial → Python WebSocket bridge → SQLite history → Next.js dashboard',
     color: 'var(--brand-secondary)',
   },
   {
@@ -218,11 +218,11 @@ function ArchitectureSection() {
   const reducedMotion = useReducedMotion();
 
   const layers = [
-    { name: 'Hardware Layer', components: ['Arduino Uno', 'MQ2 Gas Sensor', 'Flame Sensor', 'PIR Motion', 'LDR Light', 'Touch Sensor', 'Joystick', '7-Segment', 'RGB LEDs', 'Buzzer', 'Servo Valve', 'Battery Monitor'], color: 'var(--brand-primary)' },
+    { name: 'Hardware Layer', components: ['Arduino Uno', 'MQ2 Gas Sensor', 'Flame Sensor', 'PIR Motion', 'LDR Light', 'Touch Sensor', 'Joystick', 'Buzzer', 'Servo Valve', 'Battery Monitor'], color: 'var(--brand-primary)' },
     { name: 'Communication', components: ['HC-05 Bluetooth', 'Serial UART', 'JSON Protocol', 'Auto-Reconnect'], color: 'var(--info)' },
     { name: 'Bridge Layer', components: ['Python asyncio', 'WebSocket Server', 'SQLite Logging', 'Threshold Config', 'Health Monitoring'], color: 'var(--safe)' },
-    { name: 'Application', components: ['Next.js 14', 'React 18', 'TypeScript', 'Recharts', 'Three.js/R3F', 'Framer Motion'], color: 'var(--warning)' },
-    { name: 'Presentation', components: ['3D Dashboard', 'Real-time Charts', 'Alert System', 'Control Panel', 'Multilingual UI'], color: 'var(--danger)' },
+    { name: 'Application', components: ['Next.js 14', 'React 18', 'TypeScript', 'Three.js/R3F', 'Framer Motion'], color: 'var(--warning)' },
+    { name: 'Presentation', components: ['3D Dashboard', 'Real-time Charts', 'Alert System', 'Control Panel'], color: 'var(--danger)' },
   ];
 
   return (
@@ -345,8 +345,8 @@ function TechStackSection() {
   const categories = [
     { name: 'Embedded', items: ['C++ (Arduino)', 'C (AVR)', 'PlatformIO'], color: 'var(--brand-primary)' },
     { name: 'Bridge', items: ['Python 3.11+', 'asyncio', 'websockets', 'pyserial', 'sqlite3'], color: 'var(--info)' },
-    { name: 'Frontend', items: ['Next.js 14', 'React 18', 'TypeScript', 'Tailwind CSS'], color: 'var(--safe)' },
-    { name: '3D & Viz', items: ['Three.js', 'React Three Fiber', '@react-three/drei', 'Recharts'], color: 'var(--warning)' },
+    { name: 'Frontend', items: ['Next.js 14', 'React 18', 'TypeScript', 'CSS Design Tokens'], color: 'var(--safe)' },
+    { name: '3D & Viz', items: ['Three.js', 'React Three Fiber', '@react-three/drei'], color: 'var(--warning)' },
     { name: 'Animation', items: ['Framer Motion', 'CSS Animations', 'Web Animations API'], color: 'var(--danger)' },
     { name: 'DevOps', items: ['Docker', 'Docker Compose', 'GitHub Actions', 'Vercel'], color: 'var(--brand-secondary)' },
   ];
@@ -359,7 +359,7 @@ function TechStackSection() {
             Technology Stack
           </h2>
           <p style={{ fontSize: 'var(--text-lg)', color: 'var(--text-secondary)', maxWidth: 600, margin: '0 auto' }}>
-            15 languages and modern tooling working in harmony
+            A focused toolchain spanning embedded C++ to a React 3D dashboard
           </p>
         </div>
       </ScrollReveal>
@@ -458,7 +458,7 @@ function CompetitionSection() {
               { title: 'Competition', details: ['Bizz Tycoons 2026', 'Date: Dec 15, 2026', 'Category: IoT Innovation', 'Team: GASTECT Systems'], icon: '🏆', color: 'var(--warning)' },
               { title: 'Timeline', details: ['Aug: Architecture Design', 'Sep: Hardware Integration', 'Oct: Software Development', 'Nov: Testing & Polish', 'Dec: Final Demo'], icon: '📅', color: 'var(--brand-primary)' },
               { title: 'Deliverables', details: ['Working Prototype', 'Live Dashboard', 'Documentation', 'Video Demo', 'Source Code'], icon: '📦', color: 'var(--safe)' },
-              { title: 'Innovation', details: ['Local-First Architecture', '15-Language Stack', '3D Real-time Viz', 'Accessibility First', 'Zero-Cloud Dependency'], icon: '💡', color: 'var(--danger)' },
+              { title: 'Innovation', details: ['Local-First Architecture', 'Real-time 3D Viz', 'Accessibility First', 'Zero-Cloud Dependency', 'Resilient Auto-Reconnect'], icon: '💡', color: 'var(--danger)' },
             ].map((card, index) => (
               <ScrollReveal key={index} variant="slideUp">
                 <motion.div

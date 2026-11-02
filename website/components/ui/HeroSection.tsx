@@ -17,6 +17,8 @@ interface HeroSectionProps {
   flame?: number;
   battery?: number;
   className?: string;
+  onSilence?: () => void;
+  onTest?: () => void;
 }
 
 export function HeroSection({
@@ -25,7 +27,9 @@ export function HeroSection({
   connected = false,
   flame = 0,
   battery = 0,
-  className = ''
+  className = '',
+  onSilence,
+  onTest,
 }: HeroSectionProps) {
   const reducedMotion = useReducedMotion();
 
@@ -229,6 +233,7 @@ export function HeroSection({
             >
               <button
                 className={clsx('btn btn-primary', 'hero-cta')}
+                onClick={onSilence}
                 style={{
                   padding: 'var(--space-md) var(--space-xl)',
                   fontSize: 'var(--text-base)',
@@ -243,6 +248,7 @@ export function HeroSection({
               </button>
               <button
                 className={clsx('btn btn-secondary', 'hero-cta')}
+                onClick={onTest}
                 style={{
                   padding: 'var(--space-md) var(--space-xl)',
                   fontSize: 'var(--text-base)',

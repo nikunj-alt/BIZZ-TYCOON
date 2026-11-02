@@ -127,9 +127,9 @@ interface SensorGrid2DProps {
   columns?: number;
 }
 
-export function SensorGrid2D({ sensors, className = '', columns = 4 }: SensorGrid2DProps) {
+export function SensorGrid2D({ sensors, className = '' }: SensorGrid2DProps) {
   return (
-    <div className={clsx('sensor-grid-2d', className)} style={{ display: 'grid', gridTemplateColumns: `repeat(${columns}, 1fr)`, gap: 'var(--space-md)' }} role="list" aria-label="Sensor status grid">
+    <div className={clsx('sensor-grid-2d', className)} role="list" aria-label="Sensor status grid">
       {sensors.map((sensor, index) => (
         <SensorCard2D key={`${sensor.name}-${index}`} sensor={sensor} index={index} />
       ))}

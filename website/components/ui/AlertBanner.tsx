@@ -11,6 +11,9 @@ interface AlertBannerProps {
   status: 'SAFE' | 'WARNING' | 'DANGER' | 'UNKNOWN';
   ppm: number;
   flame: number;
+  warn?: number;
+  danger?: number;
+  flameDanger?: number;
   onDismiss?: () => void;
   onSilence?: () => void;
   onEvacuate?: () => void;
@@ -21,6 +24,9 @@ export function AlertBanner({
   status = 'UNKNOWN',
   ppm = 0,
   flame = 0,
+  warn = 200,
+  danger = 500,
+  flameDanger = 400,
   onDismiss,
   onSilence,
   onEvacuate,
@@ -68,7 +74,7 @@ export function AlertBanner({
       level: 'warning',
       icon: '⚠️',
       title: 'Elevated Gas Levels Detected',
-      message: `Gas concentration at ${ppm} PPM — above warning threshold (200 PPM). Ventilate area and investigate source.`,
+      message: `Gas concentration at ${ppm} PPM — above warning threshold (${warn} PPM). Ventilate area and investigate source.`,
       color: 'var(--warning)',
       glow: 'var(--warning-glow)',
       bg: 'rgba(255, 214, 0, 0.12)',
@@ -82,7 +88,7 @@ export function AlertBanner({
       level: 'critical',
       icon: '🚨',
       title: 'CRITICAL: DANGEROUS GAS CONCENTRATION',
-      message: `Gas concentration at ${ppm} PPM — EXCEEDS DANGER THRESHOLD (500 PPM). EVACUATE IMMEDIATELY! ${flame >= 600 ? 'FLAME DETECTED!' : ''}`,
+      message: `Gas concentration at ${ppm} PPM — EXCEEDS DANGER THRESHOLD (${danger} PPM). EVACUATE IMMEDIATELY! ${flame >= flameDanger ? 'FLAME DETECTED!' : ''}`,
       color: 'var(--danger)',
       glow: 'var(--danger-glow)',
       bg: 'rgba(255, 61, 0, 0.15)',

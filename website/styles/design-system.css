@@ -476,6 +476,38 @@ body {
 .grid-cols-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 
 /* ==========================================================================
+ * Dashboard & Sensor Grids (fluid, responsive)
+ * ========================================================================== */
+
+/* Main dashboard: content + fixed-width control panel rail. */
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: 1fr 320px;
+  gap: var(--space-xl);
+  margin-top: var(--space-2xl);
+}
+
+@media (max-width: 1024px) {
+  .dashboard-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Reading card grid: auto-fit so cards wrap gracefully on small screens.
+   The inline auto-fit column count is set in ReadingCard.tsx. */
+.reading-card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+}
+
+/* Sensor grid (2D): same auto-fit behavior. */
+.sensor-grid-2d {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: var(--space-md);
+}
+
+/* ==========================================================================
  * Responsive Breakpoints (480px, 768px, 1024px, 1440px, 1920px)
  * ========================================================================== */
 
